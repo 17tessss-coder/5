@@ -1,0 +1,40 @@
+
+name: Build 17TESS Vocal Sauce V04
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-2022
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure Windows x64
+        run: cmake -S 17TESS_VOCAL_SAUCE_V04_READY_FOR_GITHUB -B build -G "Visual Studio 17 2022" -A x64
+
+      - name: Compile VST3
+        run: cmake --build build --config Release --target VocalSauce_VST3 --parallel 4
+
+      - name: Package VST3
+        shell: pwsh
+        run: |
+          $bundle = Get-ChildItem -Path build -Recurse -Directory -Filter "17TESS VOCAL SAUCE.vst3" | Select-Object -First 1
+          if (-not $bundle) {
+            throw "VST3 bundle not found"
+          }
+          Compress-Archive -LiteralPath $bundle.FullName -DestinationPath "17TESS_V04_WIN64.zip" -Force
+
+      - name: Upload plugin
+        uses: actions/upload-artifact@v4
+        with:
+          name: 17TESS-VOCAL-SAUCE-V04-WIN64
+          path: 17TESS_V04_WIN64.zip
+          if-no-files-found: error
